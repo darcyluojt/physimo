@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="container">
+    {% for att in attachments %}
+      <div class="attachment-item">
+        <img src="{{ att.postmark_url }}" alt="Attachment Image" class="attachment-image">
+        {% if att.metrics.all %}
+          <ul class="metrics-list">
+            {% for metric in att.metrics.all %}
+              <li>{{ metric.archetype.slug }}: {{ metric.value|floatformat:2 }}
+                  (accuracy: {% widthratio metric.accuracy 1 100 %}%)
+              </li>
+            {% endfor %}
+              </ul>
+        {% else %}
+          <p class="no-metrics">No metrics available.</p>
+        {% endif %}
+          </div>
+    {% empty %}
+          <p>No attachments found.</p>
+    {% endfor %}
+  </div>
+{% endblock %}
+{% block styles %}
+  <style>
+    .container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+      gap: 1rem;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .attachment-item {
+      border: 1px solid #e2e8f0;
+      border-radius: 0.5rem;
+      overflow: hidden;       /* ensure child img can’t bleed out */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0.5rem;
+      max-width: 100%;
+    }
+    .attachment-image {
+      width: 98%;            /* fill its grid cell */
+      max-height: 650px;          /* fixed thumbnail height */
+      object-fit: cover;      /* crop to fill without distortion */
+      border-radius: 0.25rem;
+      margin-bottom: 0.5rem;
+    }
+    .metrics-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      font-size: 0.9rem;
+    }
+    .metrics-list li {
+      margin-bottom: 0.25rem;
+    }
+    .no-metrics {
+      color: #718096;
+      font-style: italic;
+    }
+  </style>
+{% endblock %}
