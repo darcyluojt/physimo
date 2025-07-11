@@ -120,13 +120,15 @@ class KneeMobilityView(LoginRequiredMixin, TemplateView):
 
 def attachment_gallery(request):
     attachments = (
-    Attachment.objects
-      .filter(task__user=request.user)
-      .order_by('-uploaded_at')
-      .prefetch_related(
-          'metrics__archetype',
-      )
-)
+      Attachment.objects
+          .filter(
+              task__user=request.user,
+              metrics__isnull=False  # only attachments with at least one metric
+          )
+          .distinct()                # in case an attachment has multiple metrics
+          .order_by('-uploaded_at')
+          .prefetch_related('metrics__archetype')
+          )
     for att in attachments:
         rel_path = att.image.name
 

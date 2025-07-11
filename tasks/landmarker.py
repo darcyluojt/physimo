@@ -52,11 +52,16 @@ def draw_landmarks_on_image(attachment,detection_result):
       pose_landmarks_proto.landmark.extend([
         landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in pose_landmarks
       ])
+      import copy
+      style = copy.deepcopy(solutions.drawing_styles.get_default_pose_landmarks_style())
+      for k in style:
+         style[k].circle_radius = 10
+         style[k].thickness = 10
       solutions.drawing_utils.draw_landmarks(
-        annotated_image,
-        pose_landmarks_proto,
-        solutions.pose.POSE_CONNECTIONS,
-        solutions.drawing_styles.get_default_pose_landmarks_style())
+          annotated_image,
+          pose_landmarks_proto,
+          solutions.pose.POSE_CONNECTIONS,
+          style)
 
     return annotated_image
 
@@ -72,7 +77,8 @@ def save_landmarks_image(attachment, detection_result):
   print(storage_path)  # "attachments/postmark/IMG_1234_postmark.jpg"
   annotated_image = draw_landmarks_on_image(attachment, detection_result)
   # annotated_bgr = cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR)
-
+  if ext == ".jpeg":
+     annotated_image = annotated_image.transpose((1,0,2))[:,::-1]
   buf = io.BytesIO()
   Image.fromarray(annotated_image).save(buf, format=ext.lstrip(".").upper())
   buf.seek(0)
