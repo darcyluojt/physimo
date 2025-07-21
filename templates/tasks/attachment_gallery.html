@@ -7,7 +7,7 @@
         {% if att.metrics.all %}
           <ul class="metrics-list">
             {% for metric in att.metrics.all %}
-              <li>{{ metric.archetype.slug }}: {{ metric.value|floatformat:2 }}
+              <li>{{ metric.archetype.title }}: {{ metric.value|floatformat:2 }}
                   (accuracy: {% widthratio metric.accuracy 1 100 %}%)
               </li>
             {% endfor %}

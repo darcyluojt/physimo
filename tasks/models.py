@@ -120,6 +120,10 @@ class MetricArchetype(models.Model):
             "e.g. [23,25,27] for hip→knee→ankle"
         )
     )
+    @property
+    def title(self):
+        # replace underscores with spaces, then Title Case
+        return self.slug.replace('_', ' ').title()
 
     def __str__(self):
         return f"{self.get_side_display()} {self.name.replace('_',' ').title()}: {self.landmark_indexes}"
