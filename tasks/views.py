@@ -51,72 +51,36 @@ class TodayTasksListView(LoginRequiredMixin, ListView):
                 .order_by("start_time")
         )
 
+from django.db.models import Min, Max
+
 class KneeMobilityView(LoginRequiredMixin, TemplateView):
     template_name = "tasks/knee_mobility.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        user = self.request.user
 
-        left_arc = MetricArchetype.objects.get(slug="left_knee_angle")
-        left_qs  = Metric.objects.filter(attachment__task__user=user,
-                                         archetype=left_arc)
-        healthy_min = left_qs.aggregate(Min("value"))["value__min"]
-        healthy_max = left_qs.aggregate(Max("value"))["value__max"]
-        total_span = healthy_max - healthy_min
-
+        left_arc  = MetricArchetype.objects.get(slug="left_knee_angle")
         right_arc = MetricArchetype.objects.get(slug="right_knee_angle")
-        right_qs = Metric.objects.filter(attachment__task__user=user,
-                                         archetype=right_arc)
-        weeks = {}
 
-        # 3) Build ISO‐week buckets
-        weeks = {}
-        for m in right_qs:
-          # group by the Task.start_time, not the upload time
-          dt = m.attachment.task.start_time
-          y, w, _ = dt.isocalendar()
-          key     = (y, w)
+        left_vals = Metric.objects.filter(archetype=left_arc)
+        # aggregate() returns e.g. {'value__min': 10.0}
+        ctx['left_min'] = left_vals.aggregate(min_val=Min('value'))['min_val'] or 0.0
+        ctx['left_max'] = left_vals.aggregate(max_val=Max('value'))['max_val'] or 135.0
 
-          weeks.setdefault(key, {"min": m.value, "max": m.value})
-          weeks[key]["min"] = min(weeks[key]["min"], m.value)
-          weeks[key]["max"] = max(weeks[key]["max"], m.value)
-        # 4) Compute “this week is Week 1” labels
-        today = date.today()
-        cy, cw, _ = today.isocalendar()
-        current_monday = date.fromisocalendar(cy, cw, 1)
+        right_vals = Metric.objects.filter(archetype=right_arc)
+        ctx['right_min'] = right_vals.aggregate(min_val=Min('value'))['min_val'] or ctx['left_min']
+        ctx['right_max'] = right_vals.aggregate(max_val=Max('value'))['max_val'] or ctx['left_max']
 
-        injured_data = []
-        for (y, w), data in sorted(weeks.items(), reverse=True):
-            # Get that week’s Monday
-            week_monday = date.fromisocalendar(y, w, 1)
-            # Full weeks between current and that week
-            weeks_diff = (current_monday - week_monday).days // 7
-            # Make it 1‐based: this week → 1, last → 2, etc.
-            week_label = f"Week {weeks_diff + 1}"
-
-            low_pct  = (data["min"] - healthy_min) / total_span * 100
-            high_pct = (data["max"] - healthy_min) / total_span * 100
-            right_pct = 100 - high_pct
-            span_pct  = high_pct - low_pct
-
-            injured_data.append({
-                "label":    week_label,
-                "min":      data["min"],
-                "max":      data["max"],
-                "low_pct":  low_pct,
-                "high_pct": high_pct,
-                "right_pct": right_pct,
-                "span_pct":  span_pct,
-            })
-
-        ctx.update({
-            "healthy_min":   healthy_min,
-            "healthy_max":   healthy_max,
-            "injured_ranges": injured_data,
-        })
+        injured = (
+            Metric.objects
+                  .filter(archetype=right_arc)
+                  .order_by('-computed_at')
+                  .first()
+        )
+        ctx['current'] = injured.value if injured else ctx['right_min']
 
         return ctx
+
 
 def attachment_gallery(request):
     attachments = (

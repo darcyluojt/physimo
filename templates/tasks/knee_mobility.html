@@ -1,84 +1,72 @@
-{# templates/tasks/knee_mobility.html #}
 {% extends "base.html" %}
+
 {% block content %}
-<div class="container">
-  <h1 class="text-center mb-4">Knee Mobility Dashboard</h1>
+  <h1>Range of Motion</h1>
 
-  <style>
-    .bar-chart {
-      width: 90%; max-width: 600px;
-      margin: 0 auto;
-      padding: 1em 0;
-    }
-    .bar {
-      position: relative;
-      height: 1.8em;
-      margin: 2em auto;
-      background: #eee;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    .segment {
-      position: absolute; top: 0; bottom: 0;
-    }
-    .in-range  { background: #4caf50; }   /* green */
-    .out-range { background: #f44336; }   /* red   */
 
-    /* labels sit just outside the bar */
-    .label-left,
-    .label-right {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 0.85em;
-      white-space: nowrap;
-      background: #fff;
-      padding: 0 0.3em;
-    }
-    .label-left  { left: -3em; }
-    .label-right { right: -3em; }
-
-    /* week label above center of bar */
-    .week-label {
-      position: absolute;
-      top: -1.2em;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 0.9em;
-      color: #090909;
-      white-space: nowrap;
-    }
-  </style>
-
-  <div class="bar-chart">
-    {# Healthy Range #}
-    <div class="bar">
-      <div class="segment in-range" style="left:0; width:100%;"></div>
-      <span class="label-left">{{ healthy_min|floatformat:1 }}°</span>
-      <span class="label-right">{{ healthy_max|floatformat:1 }}°</span>
-      <div class="week-label">Healthy Range</div>
-    </div>
-
-    {# Injured leg history #}
-    {% for w in injured_ranges %}
-      <div class="bar">
-        {# under-flexion (red) #}
-        <div class="segment out-range"
-             style="left:0; width:{{ w.low_pct }}%;"></div>
-
-        {# achieved-range (green) #}
-        <div class="segment in-range"
-             style="left:{{ w.low_pct }}%; width:{{ w.span_pct }}%;"></div>
-
-        {# under-extension (red) #}
-        <div class="segment out-range"
-             style="left:{{ w.low_pct|floatformat:"1"|add:w.span_pct }}%; width:{{ w.right_pct }}%;"></div>
-
-        <span class="label-left">{{ w.min|floatformat:1 }}°</span>
-        <span class="label-right">{{ w.max|floatformat:1 }}°</span>
-        <div class="week-label">{{ w.label }}</div>
-      </div>
-    {% endfor %}
+  <div id="gauge-container" style="background-image: url(/media/range_of_motion.png);">
+    <div id="gauge"></div>
   </div>
-</div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script>
+    // pull data out of Django context
+    const minVal     = {{ left_min }};
+    const maxVal     = {{ left_max }};
+    const goodMin    = {{ right_min }};
+    const goodMax    = {{ right_max }};
+    const currentVal = {{ current }};
+
+    const data = [{
+      type: "indicator",
+      mode: "gauge+number",
+      // value: currentVal,
+      gauge: {
+        shape: "semi",
+        borderwidth: 0,
+        bordercolor: "rgba(0,0,0,0)",
+        axis: {
+          range: [0, 180],
+          tickmode: "array",
+          tickvals: [minVal, goodMin, goodMax, maxVal],
+          tickformat: ".1f",
+          ticksuffix: "°",
+          tickfont: { size: 12 }
+          },
+        bar: { color: "crimson", line: { width: 0 } },
+        steps: [
+          { range: [minVal, goodMin], color: "gray", line: { width: 0 }, thickness: 0.5 },
+          { range: [goodMin, goodMax], color: "lightgreen", line: { width: 0 }, thickness: 0.5  },
+          { range: [goodMax, maxVal], color: "gray", line: { width: 0 }, thickness: 0.5  },
+          { range: [maxVal, 180], color: "transparent", line: { width: 0 }, thickness: 0.5 }
+        ],
+        threshold: {
+          value: currentVal,
+          line: { width: 0 }
+        }
+      }
+    }];
+
+    const layout = { margin: { t:40, b:0 }, font: { size: 14 },
+                     paper_bgcolor: "transparent", plot_bgcolor: "transparent" };
+    Plotly.newPlot('gauge', data, layout, { displayModeBar: false });
+  </script>
+{% endblock %}
+{% block styles %}
+  <style>
+    #gauge-container {
+    background: no-repeat center/contain;
+    background-position: 120px center;
+    width: 600px; height: 600px;
+    position: relative;
+  }
+  #gauge {
+    position: absolute;
+    top: -18px; left: 0;
+    width: 140%; height: 80%;
+  }
+
+  </style>
 {% endblock %}
